@@ -44,13 +44,16 @@ public class TablePanel extends javax.swing.JPanel {
         jResultSetTable.setModel(resultSetTableSorter);
         SwingUtils.adjustRowHeight(jResultSetTable);
 
-        jResultSetTable.setDefaultRenderer(jResultSetTable.getColumnClass(ResultSetTableModel.SUCCESS), new SuccessCell());
+        // TODO check when sorter table model will filter out or reorder columns:
+        // may throw IAE
+        final TableColumn columnSuccess = jResultSetTable.getColumn(ResultSetTableModel.COLUMN_SUCCESS);
+        columnSuccess.setCellRenderer(new SuccessCell());
 
         final RatingCell ratingCell = new RatingCell();
-
-        final TableColumn column = jResultSetTable.getColumn(resultSetTableModel.getColumnName(ResultSetTableModel.RATING));
-        column.setCellRenderer(ratingCell);
-        column.setCellEditor(ratingCell);
+        // may throw IAE
+        final TableColumn columnRating = jResultSetTable.getColumn(ResultSetTableModel.COLUMN_RATING);
+        columnRating.setCellRenderer(ratingCell);
+        columnRating.setCellEditor(ratingCell);
     }
 
     /**
@@ -82,7 +85,7 @@ public class TablePanel extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     public void setResults(List<ServiceResult> results) {
-        getTableModel().setResults(results);
+        getTableModel().setServiceResults(results);
     }
 
     public ListSelectionModel getSelectionModel() {
