@@ -3,12 +3,16 @@
  ***************************************************************************** */
 package fr.jmmc.oimaging.gui;
 
-
+import fr.jmmc.jmcs.App;
+import fr.jmmc.jmcs.gui.component.ComponentResizeAdapter;
+import fr.jmmc.jmcs.gui.util.WindowUtils;
+import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
+import javax.swing.JFrame;
 
 /**
  * Panel to be added in a dialog box to edit the display of the table
@@ -20,6 +24,53 @@ public class TableEditorPanel extends javax.swing.JPanel {
     /** default serial UID for Serializable interface */
     private static final long serialVersionUID = 1;
 
+    /**
+     * Display the table editor using the given target name as the initial selected target
+     * @param allColumns All available columns (currently displayed or not) 
+     * @param displayedColumns Currently displayed columns
+     * @param dialogSizePref optional preference key to restore dialog size
+     * @return updated visible column names or null
+     */
+    public static List<String> showEditor(final List<String> allColumns,
+                                          final List<String> displayedColumns,
+                                          final String dialogSizePref) {
+
+        // 1. Create the dialog (modal):
+        final JDialog dialog = new JDialog(App.getFrame(), "Edit table columns", true);
+
+        final Dimension dim = new Dimension(600, 500);
+        dialog.setMinimumSize(dim);
+        dialog.addComponentListener(new ComponentResizeAdapter(dim));
+
+        // 2. Optional: What happens when the dialog closes ?
+        dialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        // 3. Create components and put them in the dialog
+        final TableEditorPanel tableEditorPanel = new TableEditorPanel(dialog, allColumns, displayedColumns);
+        dialog.add(tableEditorPanel);
+
+        // 4. Size the dialog.
+        WindowUtils.setClosingKeyboardShortcuts(dialog);
+        dialog.pack();
+
+        // Restore, then automatically save window size changes:
+        WindowUtils.rememberWindowSize(dialog, dialogSizePref);
+
+        // Center it :
+        dialog.setLocationRelativeTo(dialog.getOwner());
+
+        // 5. Show it and waits until dialog is not visible or disposed :
+        dialog.setResizable(true);
+        dialog.setVisible(true);
+
+        // when dialog returns OK, set the chosen columns
+        if (tableEditorPanel.isResult()) {
+            return tableEditorPanel.getVisibleColumns();
+        }
+        return null;
+    }
+
+    /* members */
     // Model and view for the list
     private final DefaultListModel<String> modelHidden = new DefaultListModel<>();
     private final DefaultListModel<String> modelDisplayed = new DefaultListModel<>();
@@ -38,7 +89,7 @@ public class TableEditorPanel extends javax.swing.JPanel {
      * @param allColumns All available columns (currently displayed or not) 
      * @param displayedColumns Currently displayed columns
      */
-    public TableEditorPanel(JDialog dialog, List<String> allColumns, List<String> displayedColumns) {
+    private TableEditorPanel(final JDialog dialog, final List<String> allColumns, final List<String> displayedColumns) {
         initComponents();
         this.dialog = dialog;
         this.allColumns = allColumns;
@@ -212,19 +263,19 @@ public class TableEditorPanel extends javax.swing.JPanel {
         allColumns.forEach(modelDisplayed::addElement);
     }//GEN-LAST:event_jButtonResetActionPerformed
 
-    public List<String> getVisibleColumns() {
-        List<String> columnsToDisplay = new ArrayList<>();
+    protected List<String> getVisibleColumns() {
+        final List<String> displayedColumns = new ArrayList<>(modelDisplayed.size());
         for (Enumeration<String> e = modelDisplayed.elements(); e.hasMoreElements();) {
-            columnsToDisplay.add(e.nextElement());
+            displayedColumns.add(e.nextElement());
         }
-        return columnsToDisplay;
+        return displayedColumns;
     }
 
     /**
      * Return the editor result
      * @return true if the user validated (ok button)
      */
-    public boolean isResult() {
+    protected boolean isResult() {
         return result;
     }
 

@@ -3,27 +3,21 @@
  ***************************************************************************** */
 package fr.jmmc.oimaging.gui;
 
-import fr.jmmc.jmcs.App;
 import fr.jmmc.jmcs.gui.component.BasicTableColumnMovedListener;
 import fr.jmmc.jmcs.gui.component.BasicTableSorter;
-import fr.jmmc.jmcs.gui.component.ComponentResizeAdapter;
 import fr.jmmc.jmcs.gui.util.AutofitTableColumns;
 import fr.jmmc.jmcs.gui.util.SwingUtils;
-import fr.jmmc.jmcs.gui.util.WindowUtils;
 import fr.jmmc.jmcs.util.NumberUtils;
 import fr.jmmc.oimaging.Preferences;
 import fr.jmmc.oimaging.model.ResultSetTableModel;
 import fr.jmmc.oimaging.model.RatingCell;
 import fr.jmmc.oimaging.services.ServiceResult;
-import java.awt.Dimension;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.swing.JComponent;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
@@ -57,8 +51,8 @@ public class TablePanel extends javax.swing.JPanel implements BasicTableColumnMo
     private final RatingCell ratingCell;
     /** object handling rendering for column Success. */
     private final SuccessCell successCell;
-    /** custom number cell renderer */
-    private final TableCellRenderer standardRenderer = new TableCellNumberRenderer();
+    /** custom number / date cell renderer */
+    private final TableCellRenderer customCellRenderer = new TableCellNumberRenderer();
     /** preference singleton */
     private final Preferences myPreferences = Preferences.getInstance();
 
@@ -100,9 +94,9 @@ public class TablePanel extends javax.swing.JPanel implements BasicTableColumnMo
         SwingUtils.adjustRowHeight(jResultSetTable);
 
         // set default renderers
-        jResultSetTable.setDefaultRenderer(Boolean.class, standardRenderer);
-        jResultSetTable.setDefaultRenderer(Double.class, standardRenderer);
-        jResultSetTable.setDefaultRenderer(Date.class, standardRenderer);
+        jResultSetTable.setDefaultRenderer(Boolean.class, customCellRenderer);
+        jResultSetTable.setDefaultRenderer(Double.class, customCellRenderer);
+        jResultSetTable.setDefaultRenderer(Date.class, customCellRenderer);
 
         // load user preference for columns:
         resultSetTableSorter.setVisibleColumnNames(myPreferences.getResultsVisibleColumns());
@@ -150,40 +144,20 @@ public class TablePanel extends javax.swing.JPanel implements BasicTableColumnMo
      * Display the table keywords editor and set the new headers
      */
     private void jButtonShowTableEditorActionPerformed(java.awt.event.ActionEvent evt) {
-        // 1. Create the dialog
-        final JDialog dialog = new JDialog(App.getFrame(), "Edit table columns", true);
+        final List<String> prevVisibleColumns = resultSetTableSorter.getVisibleColumnNames();
 
-        final Dimension dim = new Dimension(600, 500);
-        dialog.setMinimumSize(dim);
-        dialog.addComponentListener(new ComponentResizeAdapter(dim));
-
-        // 2. Optional: What happens when the dialog closes ?
-        dialog.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        // 3. Create components and put them in the dialog
-        final TableEditorPanel tableEditorPanel = new TableEditorPanel(dialog,
+        // show the table editor dialog to select displayed columns:
+        final List<String> newVisibleColumns = TableEditorPanel.showEditor(
                 getTableModel().getColumnNames(),
-                resultSetTableSorter.getVisibleColumnNames()
+                prevVisibleColumns,
+                TABLE_EDITOR_DIMENSION_KEY
         );
-        dialog.add(tableEditorPanel);
 
-        // 4. Size the dialog.
-        WindowUtils.setClosingKeyboardShortcuts(dialog);
-        dialog.pack();
-
-        // Restore, then automatically save window size changes:
-        WindowUtils.rememberWindowSize(dialog, TABLE_EDITOR_DIMENSION_KEY);
-
-        // Center it :
-        dialog.setLocationRelativeTo(dialog.getOwner());
-
-        // 5. Show it and waits until dialog is not visible or disposed :
-        dialog.setResizable(true);
-        dialog.setVisible(true);
-
-        // when dialog returns OK, set the chosen columns
-        if (tableEditorPanel.isResult()) {
-            setVisibleColumnNames(tableEditorPanel.getVisibleColumns());
+        if (newVisibleColumns != null) {
+            // Update visible columns if needed:
+            if (!prevVisibleColumns.equals(newVisibleColumns)) {
+                setVisibleColumnNames(newVisibleColumns);
+            }
         }
     }
 
@@ -214,7 +188,7 @@ public class TablePanel extends javax.swing.JPanel implements BasicTableColumnMo
     public void setResults(List<ServiceResult> results) {
         final List<String> prevAllColumns = myPreferences.getResultsAllColumns();
         getTableModel().setResults(results, prevAllColumns);
-        
+
         // Update all columns if needed:
         final List<String> newAllColumns = getTableModel().getColumnNames();
         if (!prevAllColumns.equals(newAllColumns)) {
